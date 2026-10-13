@@ -1,0 +1,8 @@
+# Credenciais reais (token do webhook) — nunca versionar
+private/config.php
+private/leads_backup/
+
+# Arquivos locais
+*.zip
+assets/img/WhatsApp Image*
+node_modules/
