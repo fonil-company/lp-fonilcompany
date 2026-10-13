@@ -1,0 +1,7 @@
+.git
+*.zip
+package-lock.json
+node_modules
+private/config.php
+private/leads_backup
+assets/img/WhatsApp Image*

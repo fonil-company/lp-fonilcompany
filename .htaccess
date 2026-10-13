@@ -3,6 +3,8 @@
 # Forçar HTTPS
 RewriteEngine On
 RewriteCond %{HTTPS} !=on
+# Atrás de proxy (Easypanel/Traefik) o HTTPS chega como X-Forwarded-Proto
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Proteger config (caso alguém mova para public_html por engano)

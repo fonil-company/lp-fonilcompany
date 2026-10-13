@@ -14,7 +14,15 @@ function config(): array {
     foreach ([dirname(__DIR__, 2) . '/private/config.php', dirname(__DIR__) . '/private/config.php'] as $path) {
         if (is_file($path)) return $c = require $path;
     }
-    error_log('[lead.php] private/config.php não encontrado');
+    // Docker/Easypanel: credenciais via variáveis de ambiente
+    if (getenv('CRM_WEBHOOK_URL')) {
+        return $c = [
+            'site_host'       => (string) getenv('SITE_HOST'),
+            'crm_webhook_url' => (string) getenv('CRM_WEBHOOK_URL'),
+            'ip_salt'         => (string) getenv('IP_SALT'),
+        ];
+    }
+    error_log('[lead.php] private/config.php não encontrado e CRM_WEBHOOK_URL não definida');
     respond(500, ['ok' => false, 'message' => 'Não foi possível enviar agora. Tente novamente em instantes.']);
 }
 
