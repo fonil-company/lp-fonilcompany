@@ -160,13 +160,13 @@
       })
         .then(function (res) { return res.json().catch(function () { return {}; }).then(function (data) { return { res: res, data: data }; }); })
         .then(function (r) {
-          if (!r.data || r.data.ok !== true) {
+          if (!r.res.ok || !r.data || r.data.ok !== true) {
             if (r.data && r.data.errors) {
               Object.keys(r.data.errors).forEach(function (k) { if (form.elements[k]) setFieldError(form, k, r.data.errors[k]); });
             }
             throw new Error((r.data && r.data.message) || 'Não foi possível enviar agora. Tente novamente em instantes.');
           }
-          onSuccess(payload);
+          onSuccess(payload, r.data.crm_sent === true);
         })
         .catch(function (err) {
           formError.textContent = err && err.message && err.message !== 'Failed to fetch'
@@ -177,13 +177,15 @@
         });
     });
 
-    function onSuccess(p) {
+    function onSuccess(p, crmSent) {
       form.hidden = true;
       form.style.display = 'none';
       done.hidden = false;
       done.focus();
+      // Anti-spam responses may acknowledge the request without sending a lead.
+      if (!crmSent) return;
       window.dataLayer.push({ event: 'generate_lead', faturamento: p.faturamento, cargo: p.cargo, event_id: p.event_id });
-      if (window.fbq) window.fbq('track', 'Lead', { content_name: 'diagnostico_comercial' }, { eventID: p.event_id });
+      if (typeof window.fbq === 'function') window.fbq('track', 'Lead', { content_name: 'diagnostico_comercial' }, { eventID: p.event_id });
     }
   }
 

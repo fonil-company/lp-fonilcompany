@@ -55,7 +55,7 @@ $str = fn(string $k, int $max = 255) => mb_substr(trim((string) ($in[$k] ?? ''))
 
 // ---------- 2. Anti-spam: honeypot + tempo mínimo ----------
 if ($str('website') !== '' || (int) ($in['elapsed_ms'] ?? 0) < 3000) {
-    respond(200, ['ok' => true]); // silently accept bots
+    respond(200, ['ok' => true, 'crm_sent' => false]); // silently accept bots without recording a conversion
 }
 
 // ---------- Rate limit simples (arquivo, sem DB) ----------
@@ -125,7 +125,11 @@ $stamps[] = (string) $now;
 @file_put_contents($rlFile, implode("\n", $stamps));
 
 // ---------- 5. Enviar ao CRM (Supabase webhook) ----------
-$webhookUrl = $cfg['crm_webhook_url'] ?? '';
+$webhookUrl = trim((string) ($cfg['crm_webhook_url'] ?? ''));
+if ($webhookUrl === '') {
+    error_log('[lead.php] Webhook CRM não configurado');
+    respond(500, ['ok' => false, 'message' => 'Não foi possível enviar agora. Tente novamente em instantes.']);
+}
 $body = [
     'source'        => 'landing-diagnostico',
     'event_id'      => $lead['event_id'],
@@ -168,4 +172,4 @@ if ($webhookUrl !== '') {
 }
 
 // ---------- 6. Sucesso ----------
-respond(200, ['ok' => true]);
+respond(200, ['ok' => true, 'crm_sent' => true]);

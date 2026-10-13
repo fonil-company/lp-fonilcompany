@@ -2,6 +2,7 @@
 *.zip
 package-lock.json
 node_modules
+tests
 private/config.php
 private/leads_backup
 assets/img/WhatsApp Image*
