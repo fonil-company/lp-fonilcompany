@@ -18,11 +18,20 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0D0E0B">
 <link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://connect.facebook.net">
+<link rel="dns-prefetch" href="https://www.facebook.com">
+<!-- Meta Pixel: dispara o PageView o mais cedo possível (base do connect rate). Quem recusou no banner não carrega. -->
+<script>
+(function(){var c;try{c=localStorage.getItem('fonil_consent')}catch(e){}if(c==='denied')return;
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init','1014610764961858');fbq('track','PageView');})();
+</script>
 <link rel="preload" href="/assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" as="image" href="/assets/img/hero-equipe-800.webp?v=2" imagesrcset="/assets/img/hero-equipe-800.webp?v=2 800w, /assets/img/hero-equipe-1024.webp 1024w" imagesizes="(min-width: 900px) 52vw, 100vw">
-<link rel="stylesheet" href="/assets/css/style.css?v=2">
+<link rel="preload" as="image" href="/assets/img/hero-equipe-800.webp?v=2" imagesrcset="/assets/img/hero-equipe-800.webp?v=2 800w, /assets/img/hero-equipe-1024.webp 1024w" imagesizes="52vw" media="(min-width: 900px)">
+<link rel="stylesheet" href="/assets/css/style.css?v=3">
 </head>
 <body>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1014610764961858&ev=PageView&noscript=1"></noscript>
 
 <header class="site-header">
   <div class="wrap">
@@ -254,13 +263,13 @@
 </footer>
 
 <div id="cookie-banner" class="cookie" role="dialog" aria-live="polite" aria-label="Preferências de cookies" hidden>
-  <p>Usamos cookies de medição (Meta Pixel) para entender o desempenho das nossas campanhas. Eles só são ativados com o seu aceite. Saiba mais na <a class="link" href="/privacidade/">Política de Privacidade</a>.</p>
+  <p>Usamos cookies de medição (Meta Pixel) para entender o desempenho das nossas campanhas. Você pode recusá-los a qualquer momento. Saiba mais na <a class="link" href="/privacidade/">Política de Privacidade</a>.</p>
   <div class="cookie__actions">
-    <button type="button" class="btn btn--sm" id="cookie-accept">Aceitar</button>
+    <button type="button" class="btn btn--sm" id="cookie-accept">Ok, entendi</button>
     <button type="button" class="btn btn--sm btn--ghost" id="cookie-reject">Recusar</button>
   </div>
 </div>
 
-<script src="/assets/js/main.js?v=3" defer></script>
+<script src="/assets/js/main.js?v=4" defer></script>
 </body>
 </html>

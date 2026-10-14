@@ -1,7 +1,6 @@
 (function () {
   'use strict';
 
-  var PIXEL_ID = '1014610764961858';
   var CONSENT_KEY = 'fonil_consent';
   var ATTR_KEY = 'fonil_attr';
   var ATTR_FIELDS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid'];
@@ -9,18 +8,7 @@
 
   window.dataLayer = window.dataLayer || [];
 
-  /* ---------- Consent + Meta Pixel (LGPD: nothing loads before opt-in) ---------- */
-  function loadPixel() {
-    if (window.fbq) return;
-    !function (f, b, e, v, n, t, s) {
-      if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
-      if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
-      t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
-    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-    window.fbq('init', PIXEL_ID);
-    window.fbq('track', 'PageView');
-  }
-
+  /* ---------- Consent (opt-out): Pixel loads in <head>; refusing revokes it ---------- */
   function getConsent() {
     try { return localStorage.getItem(CONSENT_KEY); } catch (e) { return null; }
   }
@@ -31,15 +19,14 @@
 
   function initConsent() {
     var banner = document.getElementById('cookie-banner');
-    var consent = getConsent();
-    if (consent === 'granted') loadPixel();
-    if (consent || !banner) return;
+    if (getConsent() || !banner) return;
     banner.hidden = false;
     document.getElementById('cookie-accept').addEventListener('click', function () {
-      setConsent('granted'); banner.hidden = true; loadPixel();
+      setConsent('granted'); banner.hidden = true;
     });
     document.getElementById('cookie-reject').addEventListener('click', function () {
       setConsent('denied'); banner.hidden = true;
+      if (window.fbq) window.fbq('consent', 'revoke');
     });
   }
 
@@ -144,7 +131,8 @@
         cargo: form.elements.cargo.value,
         website: form.elements.website.value,
         elapsed_ms: Date.now() - openedAt,
-        event_id: eventId
+        event_id: eventId,
+        consent: getConsent() || ''
       };
       ATTR_FIELDS.concat('pagina').forEach(function (k) { payload[k] = attribution[k] || ''; });
 

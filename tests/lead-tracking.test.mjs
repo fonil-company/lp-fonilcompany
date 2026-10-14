@@ -25,6 +25,11 @@ function page(fetch, consent = 'granted') {
     fetch,
   };
   context.window = context;
+  // The Pixel base code lives in index.html <head> and is skipped when consent was denied
+  if (consent !== 'denied') {
+    context.fbq = function () { context.fbq.queue.push(arguments); };
+    context.fbq.queue = [];
+  }
   vm.runInNewContext(source, context);
   return {
     form, nodes,

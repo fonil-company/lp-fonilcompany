@@ -20,6 +20,9 @@ function config(): array {
             'site_host'       => (string) getenv('SITE_HOST'),
             'crm_webhook_url' => (string) getenv('CRM_WEBHOOK_URL'),
             'ip_salt'         => (string) getenv('IP_SALT'),
+            'meta_pixel_id'        => (string) (getenv('META_PIXEL_ID') ?: '1014610764961858'),
+            'meta_capi_token'      => (string) getenv('META_CAPI_TOKEN'),
+            'meta_test_event_code' => (string) getenv('META_TEST_EVENT_CODE'),
         ];
     }
     error_log('[lead.php] private/config.php não encontrado e CRM_WEBHOOK_URL não definida');
@@ -30,6 +33,79 @@ function respond(int $code, array $body): never {
     http_response_code($code);
     echo json_encode($body, JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// Real visitor IP: behind Hostinger CDN / Traefik REMOTE_ADDR is the proxy
+function client_ip(): string {
+    foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $h) {
+        foreach (explode(',', (string) ($_SERVER[$h] ?? '')) as $ip) {
+            $ip = trim($ip);
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return $ip;
+        }
+    }
+    return (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+}
+
+// ---------- Meta Conversions API: Lead (dedup with browser Pixel via event_id) ----------
+function send_capi_lead(array $cfg, array $lead): void {
+    $pixel = $cfg['meta_pixel_id'] ?? '';
+    $token = $cfg['meta_capi_token'] ?? '';
+    if ($pixel === '' || $token === '') return;
+
+    $h = fn(string $v) => $v === '' ? null : hash('sha256', $v);
+    $norm = fn(string $v) => mb_strtolower(trim(preg_replace('/\s+/u', ' ', $v)));
+    $parts = explode(' ', $norm($lead['nome']));
+
+    // _fbc: cookie set by the Pixel; fallback built from the ad click's fbclid
+    $fbc = (string) ($_COOKIE['_fbc'] ?? '');
+    if ($fbc === '' && $lead['fbclid'] !== '') $fbc = 'fb.1.' . (int) (microtime(true) * 1000) . '.' . $lead['fbclid'];
+
+    $userData = array_filter([
+        'em'                => [$h($lead['email'])],
+        'ph'                => [$h('55' . $lead['whatsapp'])],
+        'fn'                => [$h($parts[0] ?? '')],
+        'ln'                => [$h(count($parts) > 1 ? end($parts) : '')],
+        'country'           => [$h('br')],
+        'external_id'       => [$h($lead['email'])],
+        'client_ip_address' => client_ip(),
+        'client_user_agent' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),
+        'fbp'               => (string) ($_COOKIE['_fbp'] ?? ''),
+        'fbc'               => $fbc,
+    ], fn($v) => is_array($v) ? $v[0] !== null : $v !== '');
+
+    $payload = [
+        'data' => [[
+            'event_name'       => 'Lead',
+            'event_time'       => time(),
+            'event_id'         => $lead['event_id'],
+            'event_source_url' => $lead['pagina'] ?: 'https://' . ($cfg['site_host'] ?: 'fonilgroup.com.br') . '/',
+            'action_source'    => 'website',
+            'user_data'        => $userData,
+            'custom_data'      => [
+                'content_name' => 'diagnostico_comercial',
+                'faturamento'  => $lead['faturamento'],
+                'cargo'        => $lead['cargo'],
+            ],
+        ]],
+    ];
+    if (!empty($cfg['meta_test_event_code'])) $payload['test_event_code'] = $cfg['meta_test_event_code'];
+
+    $ch = curl_init('https://graph.facebook.com/v24.0/' . rawurlencode($pixel) . '/events?access_token=' . rawurlencode($token));
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT        => 8,
+    ]);
+    $response = curl_exec($ch);
+    $status   = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $err      = curl_error($ch);
+    curl_close($ch);
+    if ($err || $status < 200 || $status >= 300) {
+        error_log("[lead.php] Meta CAPI failed – HTTP {$status} – {$err} – body: {$response}");
+    }
 }
 
 // ---------- 1. Receive: POST + JSON only ----------
@@ -171,5 +247,13 @@ if ($webhookUrl !== '') {
     }
 }
 
-// ---------- 6. Sucesso ----------
-respond(200, ['ok' => true, 'crm_sent' => true]);
+// ---------- 6. Sucesso: responde ao visitante e só depois envia ao Meta ----------
+ignore_user_abort(true);
+http_response_code(200);
+echo json_encode(['ok' => true, 'crm_sent' => true]);
+if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+elseif (function_exists('litespeed_finish_request')) litespeed_finish_request();
+
+// ---------- 7. Meta Conversions API (respeita a recusa no banner de cookies) ----------
+if (($in['consent'] ?? '') !== 'denied') send_capi_lead($cfg, $lead);
+exit;
